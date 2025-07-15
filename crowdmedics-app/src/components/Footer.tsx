@@ -3,17 +3,23 @@ import Link from 'next/link';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="bg-gray-900 text-gray-400 mt-auto">
-      <div className="container mx-auto p-6 text-center">
-        <div className="flex justify-center space-x-6 mb-4">
-          <Link href="/about" className="hover:text-white transition-colors">About</Link>
-          <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
-          <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+    <footer className="w-full glass glow-border mt-0 py-10 px-0 flex flex-col items-center justify-center border-t-0 shadow-2xl bg-white/10">
+      <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-5xl px-8 gap-8">
+        <div className="flex flex-col items-center md:items-start">
+          <div className="text-3xl md:text-4xl font-extrabold gradient-text drop-shadow-xl mb-2 flex items-center gap-2">
+            CrowdMedics <span className="text-3xl">🚑</span>
+          </div>
+          <p className="text-lg text-white/80 mb-2 md:mb-0">A platform to connect heroes with those in need.</p>
         </div>
-        <p>© {currentYear} CrowdMedics. All Rights Reserved.</p>
-        <p className="text-sm mt-2">A platform to connect heroes with those in need.</p>
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <Link href="/about" className="text-lg text-white/90 hover:gradient-text font-semibold transition-all">About</Link>
+          <Link href="/contact" className="text-lg text-white/90 hover:gradient-text font-semibold transition-all">Contact</Link>
+          <Link href="/privacy" className="text-lg text-white/90 hover:gradient-text font-semibold transition-all">Privacy Policy</Link>
+        </div>
+      </div>
+      <div className="w-full text-center mt-8 text-white/60 text-base">
+        © {currentYear} CrowdMedics. All Rights Reserved.
       </div>
     </footer>
   );

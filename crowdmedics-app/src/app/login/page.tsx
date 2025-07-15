@@ -10,19 +10,45 @@ import { useRouter } from 'next/navigation';
 export default function LoginPage() {
   const router = useRouter();
 
+  // Redirect if already logged in
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // If the event is SIGNED_IN, the user has successfully logged in or signed up.
-      // We redirect them to the home page to be handled by the main layout logic.
-      if (event === 'SIGNED_IN') {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
         router.push('/');
-        // Use router.refresh() to ensure the server-side state is updated.
-        // This helps the main page correctly identify the new user.
+        router.refresh();
+      }
+    };
+    checkSession();
+  }, [router]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        let role = null;
+        if (typeof window !== 'undefined') {
+          role = localStorage.getItem('crowdmedics_role');
+        }
+        if (role) {
+          const user = session.user;
+          if (role === 'client') {
+            await supabase.from('clients').upsert({ id: user.id, email: user.email });
+            if (typeof window !== 'undefined') localStorage.removeItem('crowdmedics_role');
+            router.push('/sos');
+            router.refresh();
+            return;
+          } else if (role === 'helper') {
+            await supabase.from('helpers').upsert({ id: user.id, email: user.email });
+            if (typeof window !== 'undefined') localStorage.removeItem('crowdmedics_role');
+            router.push('/profilecompletion');
+            router.refresh();
+            return;
+          }
+        }
+        router.push('/');
         router.refresh(); 
       }
     });
-
-    // Cleanup the subscription when the component unmounts
     return () => subscription.unsubscribe();
   }, [router]);
 
