@@ -1,5 +1,6 @@
 // src/components/Footer.tsx
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -8,7 +9,14 @@ export default function Footer() {
       <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-5xl px-8 gap-8">
         <div className="flex flex-col items-center md:items-start">
           <div className="text-3xl md:text-4xl font-extrabold gradient-text drop-shadow-xl mb-2 flex items-center gap-2">
-            CrowdMedics <span className="text-3xl">🚑</span>
+            <Image
+              src="/1000082630-removebg-preview.png"
+              alt="CrowdMedics Logo"
+              width={40}
+              height={40}
+              className="drop-shadow-xl"
+            />
+            CrowdMedics
           </div>
           <p className="text-lg text-white/80 mb-2 md:mb-0">A platform to connect heroes with those in need.</p>
         </div>

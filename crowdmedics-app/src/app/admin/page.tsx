@@ -30,8 +30,8 @@ export default function AdminPage() {
     fetchData();
   }, []);
 
-  const unverifiedMedics = medics.filter((m: any) => m.verified === false);
-  const verifiedMedics = medics.filter((m: any) => m.verified === true);
+  const unverifiedMedics = medics.filter((m: any) => m.verified !== 'true');
+  const verifiedMedics = medics.filter((m: any) => m.verified === 'true');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 py-10 px-2">
@@ -72,26 +72,84 @@ export default function AdminPage() {
 
 function ProfileList({ title, profiles, highlightUnverified, showActions }: any) {
   const [updating, setUpdating] = useState<string | null>(null);
+  const [localProfiles, setLocalProfiles] = useState(profiles);
+  
+  // Update local profiles when profiles prop changes
+  useEffect(() => {
+    setLocalProfiles(profiles);
+  }, [profiles]);
+
   const handleVerify = async (profileId: string) => {
     setUpdating(profileId);
-    await supabase.from('helpers').update({ verified: true }).eq('id', profileId);
-    setUpdating(null);
-    window.location.reload();
+    try {
+      console.log('Verifying profile:', profileId);
+      const { error } = await supabase
+        .from('helpers')
+        .update({ verified: 'true' }) // Use string 'true' since verified is varchar
+        .eq('id', parseInt(profileId));
+      
+      if (error) {
+        console.error('Error verifying profile:', error);
+        alert('Error verifying profile. Please try again.');
+      } else {
+        console.log('Profile verified successfully:', profileId);
+        // Update local state immediately
+        setLocalProfiles((prev: any[]) => 
+          prev.map((profile: any) => 
+            profile.id === parseInt(profileId) 
+              ? { ...profile, verified: 'true' }
+              : profile
+          )
+        );
+        alert('Profile verified successfully!');
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      alert('An unexpected error occurred.');
+    } finally {
+      setUpdating(null);
+    }
   };
+
   const handleReject = async (profileId: string) => {
     setUpdating(profileId);
-    await supabase.from('helpers').update({ verified: false }).eq('id', profileId);
-    setUpdating(null);
-    window.location.reload();
+    try {
+      console.log('Rejecting profile:', profileId);
+      const { error } = await supabase
+        .from('helpers')
+        .update({ verified: 'false' }) // Use string 'false' since verified is varchar
+        .eq('id', parseInt(profileId));
+      
+      if (error) {
+        console.error('Error rejecting profile:', error);
+        alert('Error rejecting profile. Please try again.');
+      } else {
+        console.log('Profile rejected successfully:', profileId);
+        // Update local state immediately
+        setLocalProfiles((prev: any[]) => 
+          prev.map((profile: any) => 
+            profile.id === parseInt(profileId) 
+              ? { ...profile, verified: 'false' }
+              : profile
+          )
+        );
+        alert('Profile rejected successfully!');
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      alert('An unexpected error occurred.');
+    } finally {
+      setUpdating(null);
+    }
   };
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">{title}</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {profiles.map((profile: any) => {
-          const isVerified = profile.verified === true;
-          const isRejected = profile.verified === false;
-          const isPending = profile.verified === null || profile.verified === undefined;
+        {localProfiles.map((profile: any) => {
+          const isVerified = profile.verified === 'true';
+          const isRejected = profile.verified === 'false';
+          const isPending = profile.verified === null || profile.verified === undefined || profile.verified === '';
           let statusBadge = isVerified
             ? <span className="ml-2 px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">Verified</span>
             : isRejected
@@ -117,8 +175,8 @@ function ProfileList({ title, profiles, highlightUnverified, showActions }: any)
               <div className="text-sm text-gray-700 mb-1"><strong>Document:</strong> <a href={profile.gov_registration_document_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">View</a></div>
               {showActions && isPending && (
                 <div className="flex gap-2 mt-4">
-                  <button onClick={() => handleVerify(profile.id)} disabled={updating === profile.id} className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 disabled:opacity-50">{updating === profile.id ? 'Accepting...' : 'Accept'}</button>
-                  <button onClick={() => handleReject(profile.id)} disabled={updating === profile.id} className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 disabled:opacity-50">{updating === profile.id ? 'Rejecting...' : 'Reject'}</button>
+                  <button onClick={() => handleVerify(profile.id.toString())} disabled={updating === profile.id.toString()} className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 disabled:opacity-50">{updating === profile.id.toString() ? 'Accepting...' : 'Accept'}</button>
+                  <button onClick={() => handleReject(profile.id.toString())} disabled={updating === profile.id.toString()} className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 disabled:opacity-50">{updating === profile.id.toString() ? 'Rejecting...' : 'Reject'}</button>
                 </div>
               )}
             </div>
@@ -159,10 +217,23 @@ function SOSList({ title, sosProfiles }: any) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sosProfiles.map((sos: any) => (
           <div key={sos.id} className="rounded-xl p-6 shadow bg-gradient-to-br from-red-50 to-yellow-50 border border-red-200">
-            <div className="font-semibold text-lg mb-1">SOS Request</div>
+            <div className="font-semibold text-lg mb-1">SOS Request #{sos.id}</div>
             <div className="text-sm text-gray-700 mb-1"><strong>User ID:</strong> {sos.user_id}</div>
-            <div className="text-sm text-gray-700 mb-1"><strong>Created At:</strong> {sos.created_at}</div>
-            {/* Optionally show more details if available */}
+            <div className="text-sm text-gray-700 mb-1"><strong>Email:</strong> {sos.email}</div>
+            <div className="text-sm text-gray-700 mb-1"><strong>Status:</strong> 
+              <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${
+                sos.status === 'active' ? 'bg-red-500 text-white' : 'bg-gray-500 text-white'
+              }`}>
+                {sos.status}
+              </span>
+            </div>
+            <div className="text-sm text-gray-700 mb-1"><strong>Location:</strong> 
+              {sos.latitude && sos.longitude 
+                ? `${(sos.latitude / 1000000).toFixed(6)}, ${(sos.longitude / 1000000).toFixed(6)}`
+                : 'Not available'
+              }
+            </div>
+            <div className="text-sm text-gray-700 mb-1"><strong>Created:</strong> {new Date(sos.created_at).toLocaleString()}</div>
           </div>
         ))}
       </div>

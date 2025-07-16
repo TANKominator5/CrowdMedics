@@ -29,8 +29,17 @@ export default function HomePage() {
           Get Protected
         </a>
         <div className="flex-1 flex justify-center">
-          <a href="/" className="text-5xl font-extrabold tracking-tight flex items-center gap-3 select-none gradient-text drop-shadow-2xl animate-fadeIn">
-            CrowdMedics <span className="text-5xl">🚑</span>
+          <a href="/" className="flex items-center gap-3 select-none animate-fadeIn">
+            <Image
+              src="/1000082630-removebg-preview.png"
+              alt="CrowdMedics Logo"
+              width={60}
+              height={60}
+              className="drop-shadow-2xl"
+            />
+            <span className="text-5xl font-extrabold tracking-tight gradient-text drop-shadow-2xl">
+              CrowdMedics
+            </span>
           </a>
         </div>
         <a

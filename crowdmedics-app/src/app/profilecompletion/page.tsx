@@ -86,7 +86,7 @@ export default function ProfileCompletionPage() {
       servable_region: form.servableRegion,
       latitude: parseFloat(form.latitude) || 0, // Convert to number, with a fallback
       longitude: parseFloat(form.longitude) || 0, // Convert to number, with a fallback
-      verified: false,
+      verified: null, // Set as null initially for pending status
     });
 
     setLoading(false);
