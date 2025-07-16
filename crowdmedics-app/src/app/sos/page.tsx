@@ -1,14 +1,15 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 export default function SosPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [location, setLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+  const [latestSos, setLatestSos] = useState<any>(null);
+  const [fetchingSos, setFetchingSos] = useState(true);
 
   useEffect(() => {
     const upsertClient = async () => {
@@ -46,6 +47,28 @@ export default function SosPage() {
     }
   }, [router]);
 
+  // Fetch latest SOS request for this user
+  useEffect(() => {
+    const fetchLatestSos = async () => {
+      if (!user) return;
+      setFetchingSos(true);
+      const { data, error } = await supabase
+        .from('sos_requests')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (!error && data) {
+        setLatestSos(data);
+      } else {
+        setLatestSos(null);
+      }
+      setFetchingSos(false);
+    };
+    fetchLatestSos();
+  }, [user, loading]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -61,40 +84,18 @@ export default function SosPage() {
     setLoading(true);
 
     try {
-      // Simple approach: don't include id field - let database auto-generate it
       const { data, error } = await supabase.from('sos_requests').insert({
-        user_id: user.id, // Store auth user ID in separate field
+        user_id: user.id,
         email: user.email,
-        // Convert coordinates to integers (multiply by 1000000 to preserve precision)
         latitude: Math.round((location?.latitude || 0) * 1000000),
         longitude: Math.round((location?.longitude || 0) * 1000000),
-        status: 'active'
+        status: 'pending'
       });
 
       if (error) {
         console.error('Full error object:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
-        
-        // If sos_requests table doesn't exist, try clients table approach
-        console.log('Trying fallback to clients table...');
-        const { data: clientData, error: clientError } = await supabase.from('clients').insert({
-          user_id: user.id, // Store auth user ID in separate field
-          email: user.email,
-          sos_active: true,
-          sos_time: new Date().toISOString(),
-          // Convert coordinates to integers for bigint columns
-          latitude: Math.round((location?.latitude || 0) * 1000000),
-          longitude: Math.round((location?.longitude || 0) * 1000000)
-        });
-        
-        if (clientError) {
-          console.error('Client error:', clientError);
-          console.error('Client error details:', JSON.stringify(clientError, null, 2));
-          alert(`Error sending SOS: ${clientError.message || 'Unknown error'}`);
-        } else {
-          console.log('SOS saved to clients table:', clientData);
-          alert('SOS sent successfully! Help is on the way!');
-        }
+        alert(`Error sending SOS: ${error.message || 'Unknown error'}`);
       } else {
         console.log('SOS sent successfully:', data);
         alert('SOS sent successfully! Help is on the way!');
@@ -105,6 +106,11 @@ export default function SosPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePayment = () => {
+    // Implement payment logic here
+    alert('Redirecting to payment...');
   };
 
   return (
@@ -123,27 +129,45 @@ export default function SosPage() {
           Logout
         </button>
       </div>
-      {/* SOS Button Section */}
+      {/* SOS Button or Status Section */}
       <div className="flex flex-col items-center justify-center flex-1 mt-48">
-        <button 
-          onClick={handleSosPress}
-          disabled={loading}
-          className={`bg-white text-red-600 font-extrabold text-7xl rounded-full shadow-2xl px-28 py-20 border-8 border-red-500 hover:scale-110 transition-transform animate-pulse drop-shadow-2xl glow-border disabled:opacity-50 disabled:cursor-not-allowed ${loading ? 'animate-spin' : ''}`}
-        >
-          {loading ? '...' : 'SOS'}
-        </button>
-        <p className="mt-14 text-white/95 text-3xl max-w-2xl text-center drop-shadow-2xl glass p-8 rounded-2xl border border-white/10">
-          {loading ? 'Sending SOS...' : 'Press the SOS button to instantly alert nearby CrowdMedics. Help is on the way!'}
-        </p>
-        {location && (
-          <div className="mt-4 text-white/80 text-sm glass p-4 rounded-xl">
-            Location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-            <div className="text-xs mt-1">
-              (Stored as: {Math.round(location.latitude * 1000000)}, {Math.round(location.longitude * 1000000)})
+        {fetchingSos ? (
+          <div className="text-white text-2xl">Loading status...</div>
+        ) : latestSos && latestSos.status === 'accepted' ? (
+          <div className="flex flex-col items-center">
+            <div className="bg-white/90 text-green-700 font-bold text-3xl rounded-2xl shadow-2xl px-12 py-10 border-4 border-green-500 mb-8">
+              Request accepted and help is on the way!
             </div>
+            <button
+              onClick={handlePayment}
+              className="bg-gradient-to-r from-blue-500 to-green-400 text-white font-bold py-4 px-16 rounded-full text-2xl shadow-xl hover:scale-105 transition-transform"
+            >
+              Payment Now
+            </button>
           </div>
+        ) : (
+          <>
+            <button
+              onClick={handleSosPress}
+              disabled={loading}
+              className={`bg-white text-red-600 font-extrabold text-7xl rounded-full shadow-2xl px-28 py-20 border-8 border-red-500 hover:scale-110 transition-transform animate-pulse drop-shadow-2xl glow-border disabled:opacity-50 disabled:cursor-not-allowed ${loading ? 'animate-spin' : ''}`}
+            >
+              {loading ? '...' : 'SOS'}
+            </button>
+            <p className="mt-14 text-white/95 text-3xl max-w-2xl text-center drop-shadow-2xl glass p-8 rounded-2xl border border-white/10">
+              {loading ? 'Sending SOS...' : 'Press the SOS button to instantly alert nearby CrowdMedics. Help is on the way!'}
+            </p>
+            {location && (
+              <div className="mt-4 text-white/80 text-sm glass p-4 rounded-xl">
+                Location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                <div className="text-xs mt-1">
+                  (Stored as: {Math.round(location.latitude * 1000000)}, {Math.round(location.longitude * 1000000)})
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
-} 
+}

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [nearbySos, setNearbySos] = useState<any[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,10 +26,25 @@ export default function DashboardPage() {
 
       if (error || !data) {
         setProfile(null);
-      } else {
-        setProfile(data);
+        setLoading(false);
+        return;
       }
+      setProfile(data);
       setLoading(false);
+
+      // If verified and has location, fetch nearby SOS requests
+      if (data.verified === true && data.latitude && data.longitude) {
+        // Haversine formula in SQL (Postgres)
+        // Assumes sos_requests table has latitude, longitude fields
+        const { data: sosNearby, error: sosError } = await supabase.rpc('get_sos_within_distance', {
+          lat: data.latitude,
+          lon: data.longitude,
+          max_distance_km: 2
+        });
+        if (!sosError && sosNearby) {
+          setNearbySos(sosNearby);
+        }
+      }
     };
     fetchProfile();
   }, [router]);
@@ -99,6 +115,58 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {/* Nearby SOS Requests for Verified Medics */}
+      {isVerified && profile.latitude && profile.longitude && (
+        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 mt-10 border border-red-200">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Nearby SOS Requests (within 2km)</h2>
+          {nearbySos.length === 0 ? (
+            <div className="text-gray-500">No SOS requests nearby.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {nearbySos.map((sos: any) => (
+                <div key={sos.id} className="rounded-xl p-6 shadow bg-gradient-to-br from-red-50 to-yellow-50 border border-red-200">
+                  <div className="font-semibold text-lg mb-1">SOS Request</div>
+                  <div className="text-sm text-gray-700 mb-1"><strong>User ID:</strong> {sos.user_id}</div>
+                  <div className="text-sm text-gray-700 mb-1"><strong>Created At:</strong> {sos.created_at}</div>
+                  <div className="text-sm text-gray-700 mb-1"><strong>Latitude:</strong> {sos.latitude}</div>
+                  <div className="text-sm text-gray-700 mb-1"><strong>Longitude:</strong> {sos.longitude}</div>
+                  {sos.status !== 'accepted' ? (
+                    <button
+                      onClick={async () => {
+                        // Get current medic's user id
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const medicId = session?.user?.id;
+                        if (!medicId) {
+                          alert('Not logged in');
+                          return;
+                        }
+                        // Update the SOS request
+                        const { error } = await supabase
+                          .from('sos_requests')
+                          .update({ status: 'accepted', accepted_by: medicId })
+                          .eq('id', sos.id);
+                        if (error) {
+                          alert('Failed to accept SOS: ' + error.message);
+                        } else {
+                          alert('SOS accepted!');
+                          window.location.reload();
+                        }
+                      }}
+                      className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
+                    >
+                      Accept
+                    </button>
+                  ) : (
+                    <div className="mt-4 px-6 py-2 bg-green-200 text-green-800 rounded-lg font-semibold">
+                      Accepted
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
