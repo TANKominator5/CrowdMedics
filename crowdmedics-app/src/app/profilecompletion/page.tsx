@@ -5,7 +5,17 @@ import { useEffect, useState } from 'react';
 
 export default function ProfileCompletionPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', phone: '', qualification: '' });
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    qualification: '',
+    govRegistrationNumber: '',
+    govRegistrationType: '',
+    govRegistrationDocument: '', // Now a string for the drive link
+    govEmployer: '',
+    govIdCardNumber: '',
+    servableRegion: '',
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -25,8 +35,9 @@ export default function ProfileCompletionPage() {
     router.refresh();
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,12 +49,23 @@ export default function ProfileCompletionPage() {
       return;
     }
     const user = session.user;
-    const { error } = await supabase.from('helpers').upsert({
+
+    // No file upload, just use the drive link
+    const documentUrl = form.govRegistrationDocument;
+
+    // Use the correct table name: "MedicData"
+    const { error } = await supabase.from('MedicData').upsert({
       id: user.id,
       email: user.email,
       name: form.name,
       phone: form.phone,
       qualification: form.qualification,
+      gov_registration_number: form.govRegistrationNumber,
+      gov_registration_type: form.govRegistrationType,
+      gov_registration_document_url: documentUrl,
+      gov_employer: form.govEmployer,
+      gov_id_card_number: form.govIdCardNumber,
+      servable_region: form.servableRegion,
     });
     setLoading(false);
     if (!error) {
@@ -71,8 +93,16 @@ export default function ProfileCompletionPage() {
         </button>
       </div>
       <div className="flex flex-col items-center justify-center flex-1 mt-48">
-        <form onSubmit={handleSubmit} className="glass glow-border p-12 rounded-3xl shadow-2xl max-w-2xl w-full flex flex-col items-center border border-white/20 animate-fadeIn">
-          <h1 className="text-4xl md:text-5xl font-extrabold gradient-text mb-8 drop-shadow-2xl">Complete Your Profile</h1>
+        <form
+          onSubmit={handleSubmit}
+          className="glass glow-border p-12 rounded-3xl shadow-2xl max-w-2xl w-full flex flex-col items-center border border-white/20 animate-fadeIn"
+        >
+          <h1 className="text-4xl md:text-5xl font-extrabold gradient-text mb-8 drop-shadow-2xl">
+            Complete Your Profile
+          </h1>
+          <p className="mb-8 text-lg text-center text-white/90">
+            Please provide your government medical registration details. This information is required to verify that you are a registered government medical professional.
+          </p>
           <div className="w-full flex flex-col gap-6 mb-8">
             <input
               type="text"
@@ -95,12 +125,78 @@ export default function ProfileCompletionPage() {
             <input
               type="text"
               name="qualification"
-              placeholder="Qualification (e.g. CPR, Nurse, Doctor)"
+              placeholder="Qualification (e.g. Registered Nurse, MBBS, Paramedic)"
               value={form.qualification}
               onChange={handleChange}
               required
               className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
             />
+            <select
+              name="govRegistrationType"
+              value={form.govRegistrationType}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            >
+              <option value="">Select Government Registration Type</option>
+              <option value="Medical Council">Medical Council</option>
+              <option value="Nursing Council">Nursing Council</option>
+              <option value="Paramedic Council">Paramedic Council</option>
+              <option value="Other">Other</option>
+            </select>
+            <input
+              type="text"
+              name="govRegistrationNumber"
+              placeholder="Government Registration Number"
+              value={form.govRegistrationNumber}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            />
+            <input
+              type="text"
+              name="govEmployer"
+              placeholder="Government Employer / Hospital / Department"
+              value={form.govEmployer}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            />
+            <input
+              type="text"
+              name="govIdCardNumber"
+              placeholder="Government ID Card Number"
+              value={form.govIdCardNumber}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            />
+            <textarea
+              name="servableRegion"
+              placeholder="Servable Region (e.g. City, District, or Area you can serve)"
+              value={form.servableRegion}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-green-400 shadow resize-none"
+              rows={2}
+            />
+            <div className="w-full">
+              <label className="block mb-2 text-lg font-semibold text-white/90">
+                Google Drive Link to Government Registration Document
+              </label>
+              <input
+                type="url"
+                name="govRegistrationDocument"
+                placeholder="Paste Google Drive link to your document"
+                value={form.govRegistrationDocument}
+                onChange={handleChange}
+                required
+                className="w-full px-6 py-3 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+              />
+              <p className="text-white/80 text-sm mt-2">
+                Please upload your document to Google Drive (PDF, JPG, PNG), set sharing to "Anyone with the link can view", and paste the link above.
+              </p>
+            </div>
           </div>
           <button
             type="submit"
@@ -113,4 +209,4 @@ export default function ProfileCompletionPage() {
       </div>
     </div>
   );
-} 
+}
