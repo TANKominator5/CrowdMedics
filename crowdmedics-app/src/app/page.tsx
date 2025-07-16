@@ -21,7 +21,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-black/40" />
       </div>
       {/* Floating Navbar */}
-      <nav className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 w-[98vw] max-w-5xl glass glow-border flex items-center justify-between px-10 py-5 shadow-2xl">
+      <nav className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 w-[98vw] max-w-5xl glass glow-border flex items-center justify-between px-10 py-2 shadow-2xl">
         <a
           href="/clientsignup"
           className="btn-animated bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold py-3 px-8 rounded-full text-lg shadow-xl glow-border"
@@ -29,17 +29,14 @@ export default function HomePage() {
           Get Protected
         </a>
         <div className="flex-1 flex justify-center">
-          <a href="/" className="flex items-center gap-3 select-none animate-fadeIn">
+          <a href="/" className="flex items-center justify-center select-none animate-fadeIn">
             <Image
               src="/1000082630-removebg-preview.png"
               alt="CrowdMedics Logo"
-              width={60}
-              height={60}
-              className="drop-shadow-2xl"
+              width={160}
+              height={160}
+              className="drop-shadow-2xl -my-6"
             />
-            <span className="text-5xl font-extrabold tracking-tight gradient-text drop-shadow-2xl">
-              CrowdMedics
-            </span>
           </a>
         </div>
         <a
