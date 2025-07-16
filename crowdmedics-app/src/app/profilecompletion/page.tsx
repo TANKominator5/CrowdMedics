@@ -11,7 +11,7 @@ export default function ProfileCompletionPage() {
     qualification: '',
     govRegistrationNumber: '',
     govRegistrationType: '',
-    govRegistrationDocument: '', // Now a string for the drive link
+    govRegistrationDocument: '', 
     govEmployer: '',
     govIdCardNumber: '',
     servableRegion: '',
@@ -69,6 +69,7 @@ export default function ProfileCompletionPage() {
       servable_region: form.servableRegion,
       latitude: parseFloat(form.latitude),
       longitude: parseFloat(form.longitude),
+      verified: false, // or 'pending' if you use a string status
     });
     setLoading(false);
     if (!error) {
