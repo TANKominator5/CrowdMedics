@@ -66,8 +66,8 @@ export default function DashboardPage() {
   }
 
   // Determine badge and status
-  const isVerified = profile.verified === true;
-  const isRejected = profile.verified === false;
+  const isVerified = profile.verified === 'true';
+  const isRejected = profile.verified === 'false';
   const badge = isVerified
     ? <span className="ml-2 px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold">Verified</span>
     : isRejected

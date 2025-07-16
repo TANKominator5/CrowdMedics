@@ -84,7 +84,7 @@ export default function SosPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.from('sos_requests').insert({
+      const { data, error } = await supabase.from('clients').insert({
         user_id: user.id,
         email: user.email,
         latitude: Math.round((location?.latitude || 0) * 1000000),
