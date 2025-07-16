@@ -15,6 +15,8 @@ export default function ProfileCompletionPage() {
     govEmployer: '',
     govIdCardNumber: '',
     servableRegion: '',
+    latitude: '',
+    longitude: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -53,8 +55,7 @@ export default function ProfileCompletionPage() {
     // No file upload, just use the drive link
     const documentUrl = form.govRegistrationDocument;
 
-    // Use the correct table name: "MedicData"
-    const { error } = await supabase.from('MedicData').upsert({
+    const { error } = await supabase.from('helpers').upsert({
       id: user.id,
       email: user.email,
       name: form.name,
@@ -66,6 +67,8 @@ export default function ProfileCompletionPage() {
       gov_employer: form.govEmployer,
       gov_id_card_number: form.govIdCardNumber,
       servable_region: form.servableRegion,
+      latitude: parseFloat(form.latitude),
+      longitude: parseFloat(form.longitude),
     });
     setLoading(false);
     if (!error) {
@@ -197,6 +200,46 @@ export default function ProfileCompletionPage() {
                 Please upload your document to Google Drive (PDF, JPG, PNG), set sharing to "Anyone with the link can view", and paste the link above.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        latitude: position.coords.latitude.toString(),
+                        longitude: position.coords.longitude.toString(),
+                      }));
+                    },
+                    () => alert('Unable to retrieve your location')
+                  );
+                } else {
+                  alert('Geolocation is not supported by your browser');
+                }
+              }}
+              className="mb-4 px-6 py-2 rounded-xl bg-blue-500 text-white font-semibold"
+            >
+              Autofill My Location
+            </button>
+            <input
+              type="text"
+              name="latitude"
+              placeholder="Latitude"
+              value={form.latitude}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            />
+            <input
+              type="text"
+              name="longitude"
+              placeholder="Longitude"
+              value={form.longitude}
+              onChange={handleChange}
+              required
+              className="w-full px-6 py-4 rounded-xl bg-white/80 text-lg text-gray-900 font-semibold border-none outline-none focus:ring-2 focus:ring-blue-400 shadow"
+            />
           </div>
           <button
             type="submit"
