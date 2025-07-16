@@ -33,6 +33,17 @@ export default function ProfileCompletionPage() {
         return;
       }
       setUser(session.user);
+      // Check if user is already a medic
+      const { data: helpers, error } = await supabase
+        .from('helpers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .limit(1);
+      if (helpers && helpers.length > 0) {
+        // User is already a medic, redirect to dashboard
+        router.push('/dashboard');
+        return;
+      }
       setIsCheckingUser(false);
     };
     fetchUser();
@@ -84,8 +95,19 @@ export default function ProfileCompletionPage() {
       console.error('Database error:', error);
       alert(`Error saving profile: ${error.message}`);
     } else {
+      // Notify admin for verification (simulate with fetch to /api/notify-admin)
+      try {
+        await fetch('/api/notify-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, email: user.email })
+        });
+      } catch (notifyError) {
+        // Optionally handle notification error
+        console.warn('Failed to notify admin:', notifyError);
+      }
       alert('Profile saved successfully! You will now be taken to your dashboard.');
-      router.push('/'); // Redirect to the main page/dashboard
+      router.push('/dashboard'); // Redirect to the dashboard
     }
   };
 
