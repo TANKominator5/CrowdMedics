@@ -1,17 +1,21 @@
+// src/app/profile-setup/page.tsx (or your file path)
 'use client';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
 
 export default function ProfileCompletionPage() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [form, setForm] = useState({
     name: '',
     phone: '',
     qualification: '',
     govRegistrationNumber: '',
     govRegistrationType: '',
-    govRegistrationDocument: '', 
+    govRegistrationDocument: '', // This holds the URL
     govEmployer: '',
     govIdCardNumber: '',
     servableRegion: '',
@@ -19,16 +23,19 @@ export default function ProfileCompletionPage() {
     longitude: '',
   });
   const [loading, setLoading] = useState(false);
+  const [isCheckingUser, setIsCheckingUser] = useState(true);
 
   useEffect(() => {
-    const upsertHelper = async () => {
+    const fetchUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        router.push('/');
+        router.push('/login');
         return;
       }
+      setUser(session.user);
+      setIsCheckingUser(false);
     };
-    upsertHelper();
+    fetchUser();
   }, [router]);
 
   const handleLogout = async () => {
@@ -42,44 +49,69 @@ export default function ProfileCompletionPage() {
     setForm({ ...form, [name]: value });
   };
 
+  // --- THIS IS THE CORRECTED SUBMIT FUNCTION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      router.push('/');
-      return;
+    if (!user) {
+        alert("Session expired. Please log in again.");
+        router.push('/login');
+        return;
     }
-    const user = session.user;
 
-    // No file upload, just use the drive link
-    const documentUrl = form.govRegistrationDocument;
+    setLoading(true);
 
-    const { error } = await supabase.from('helpers').upsert({
-      id: user.id,
+    const { error } = await supabase.from('helpers').insert({
+      // The keys here MUST match your database column names
+      // Removed id field - let database auto-generate it
+      user_id: user.id, // Store the auth user ID in a separate field
       email: user.email,
       name: form.name,
       phone: form.phone,
       qualification: form.qualification,
-      gov_registration_number: form.govRegistrationNumber,
       gov_registration_type: form.govRegistrationType,
-      gov_registration_document_url: documentUrl,
-      gov_employer: form.govEmployer,
+      gov_registration_number: form.govRegistrationNumber,
       gov_id_card_number: form.govIdCardNumber,
+      gov_registration_document_url: form.govRegistrationDocument,
       servable_region: form.servableRegion,
-      latitude: parseFloat(form.latitude),
-      longitude: parseFloat(form.longitude),
-      verified: false, // or 'pending' if you use a string status
+      latitude: parseFloat(form.latitude) || 0, // Convert to number, with a fallback
+      longitude: parseFloat(form.longitude) || 0, // Convert to number, with a fallback
+      verified: false,
     });
+
     setLoading(false);
-    if (!error) {
-      alert('Profile saved successfully');
-      router.push('/dashboard');
+
+    if (error) {
+      console.error('Database error:', error);
+      alert(`Error saving profile: ${error.message}`);
     } else {
-      alert('Error saving profile. Please try again.');
+      alert('Profile saved successfully! You will now be taken to your dashboard.');
+      router.push('/'); // Redirect to the main page/dashboard
     }
   };
 
+  const handleAutofillLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setForm((prev: typeof form) => ({
+          ...prev,
+          latitude: position.coords.latitude.toString(),
+          longitude: position.coords.longitude.toString(),
+        }));
+        alert('Location captured!');
+      },
+      () => alert('Unable to retrieve your location. Please enable location services.')
+    );
+  };
+  
+  if (isCheckingUser) {
+    return <div className="flex justify-center items-center h-screen bg-gray-900 text-white">Loading...</div>;
+  }
+
+  // --- Your JSX form is already good, no changes needed there ---
   return (
     <div className="fullscreen-center bg-gradient-to-br from-[#43cea2] via-[#a18cd1] to-[#fbc2eb] animate-fadeIn relative">
       {/* Top Bar */}
@@ -101,7 +133,8 @@ export default function ProfileCompletionPage() {
           onSubmit={handleSubmit}
           className="glass glow-border p-12 rounded-3xl shadow-2xl max-w-2xl w-full flex flex-col items-center border border-white/20 animate-fadeIn"
         >
-          <h1 className="text-4xl md:text-5xl font-extrabold gradient-text mb-8 drop-shadow-2xl">
+          {/* Your form JSX is fine, keep it as is. The logic in handleSubmit is what matters. */}
+           <h1 className="text-4xl md:text-5xl font-extrabold gradient-text mb-8 drop-shadow-2xl">
             Complete Your Profile
           </h1>
           <p className="mb-8 text-lg text-center text-white/90">
@@ -203,22 +236,7 @@ export default function ProfileCompletionPage() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                      setForm((prev) => ({
-                        ...prev,
-                        latitude: position.coords.latitude.toString(),
-                        longitude: position.coords.longitude.toString(),
-                      }));
-                    },
-                    () => alert('Unable to retrieve your location')
-                  );
-                } else {
-                  alert('Geolocation is not supported by your browser');
-                }
-              }}
+              onClick={handleAutofillLocation}
               className="mb-4 px-6 py-2 rounded-xl bg-blue-500 text-white font-semibold"
             >
               Autofill My Location
